@@ -11,7 +11,6 @@
  *
  */
 
-#include <utils.h>
 
 #include <arg_parser.h>
 #include <flow_offload.h>
