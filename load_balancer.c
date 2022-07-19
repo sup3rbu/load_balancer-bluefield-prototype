@@ -164,13 +164,13 @@ handle_packets_received(uint16_t packets_received, struct rte_mbuf **packets, st
 	uint32_t current_packet = 0;
 	struct ipv4_5tuple tuple = {0};
 
-	int data;
+	int sid;
 	int32_t ret = 0;
 
 	for (current_packet = 0; current_packet < packets_received; current_packet++)
 	{
 
-		data = 0;
+		sid = 0;
 		uint32_t payload_offset = 0;
 		struct rte_sft_mbuf_info mbuf_info = {0};
 		struct doca_dpi_parsing_info parsing_info = {0};
@@ -184,29 +184,23 @@ handle_packets_received(uint16_t packets_received, struct rte_mbuf **packets, st
 		extract_tuple(&tuple, parsing_info);
 		print_tuple(tuple);
 
-		ret = rte_hash_lookup_data(hashtable, &tuple, (void **)&data);
+		ret = rte_hash_lookup_data(hashtable, &tuple, (void **)&sid);
 
 		if (ret == -ENOENT)
 		{
-			DOCA_LOG_INFO("tupla non presente");
-			data = dpi_scan(packet, &parsing_info, &payload_offset);
-			if (data)
-				ret = rte_hash_add_key_data(hashtable, &tuple, (void *)data);
+			//DOCA_LOG_INFO("tupla non presente");
+			DOCA_LOG_INFO("DPI scan");
+			sid = dpi_scan(packet, &parsing_info, &payload_offset);
+			if (sid)
+				ret = rte_hash_add_key_data(hashtable, &tuple, (void *)sid);
 		}
 		else
 		{
-			DOCA_LOG_INFO("tupla presente valore:%d", data);
+			//DOCA_LOG_INFO("tupla presente valore:%d", sid);
 		}
 
-		// se non è presente nella hash table lanciare dpi_scan
-		// inserirla nella hash table con il risultato di dpi_scan
-		// e inoltra il pacchetto
 
-		// se è presente nella hash table
-		// non lanciare dpi_scan
-		// e inoltra il pacchetto
-
-		if (data == 1)
+		if (sid == 1)
 			egress_port = packet->port ^ 1;
 		else
 			egress_port = packet->port;
