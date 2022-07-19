@@ -35,8 +35,11 @@ DOCA_LOG_REGISTER(DPI_SCAN);
  *  The main function, which does initialization
  *  of the rules and starts the process of filtering the DNS packets.
  */
+static void
+handle_packets_received(uint16_t packets_received, struct rte_mbuf **packets);
 
 void scan(unsigned int nb_queues, unsigned int nb_ports);
+
 static int
 set_l4_parsing_info(struct doca_dpi_parsing_info *parsing_info, uint32_t *payload_offset,
 					const struct rte_sft_mbuf_info *mbuf_info)
@@ -131,15 +134,12 @@ int dpi_scan(struct rte_mbuf *packet, struct doca_dpi_parsing_info *parsing_info
 	};
 
 	/* Initialization of DPI library */
-
 	dpi_ctx = doca_dpi_init(&doca_dpi_config, &err);
 	if (err < 0)
 	{
 		DOCA_LOG_ERR("DPI init failed, error=%d", err);
 		return err;
 	}
-
-	DOCA_LOG_INFO("find segmentation fault #1");
 
 	/* Load signatures into regex device */
 	ret = doca_dpi_load_signatures(dpi_ctx, cdo_filename);
@@ -149,8 +149,6 @@ int dpi_scan(struct rte_mbuf *packet, struct doca_dpi_parsing_info *parsing_info
 		return ret;
 	}
 
-	DOCA_LOG_INFO("find segmentation fault #2");
-
 	/* Create DPI flow according to packet info */
 	flow_ctx = doca_dpi_flow_create(dpi_ctx, dpi_queue, parsing_info, &err, &result);
 	if (err < 0)
@@ -158,8 +156,6 @@ int dpi_scan(struct rte_mbuf *packet, struct doca_dpi_parsing_info *parsing_info
 		DOCA_LOG_ERR("DPI flow creation failed, error=%d", err);
 		return err;
 	}
-
-	DOCA_LOG_INFO("find segmentation fault #3");
 
 	ret = doca_dpi_enqueue(flow_ctx, packet, to_server, *payload_offset, NULL);
 	if (ret == DOCA_DPI_ENQ_PROCESSING || ret == DOCA_DPI_ENQ_BUSY)
@@ -169,8 +165,6 @@ int dpi_scan(struct rte_mbuf *packet, struct doca_dpi_parsing_info *parsing_info
 		DOCA_LOG_ERR("DPI enqueue failed, error=%d", ret);
 		return ret;
 	}
-
-	DOCA_LOG_INFO("find segmentation fault #4");
 
 	while (packets_to_process > 0)
 	{
@@ -193,9 +187,8 @@ int dpi_scan(struct rte_mbuf *packet, struct doca_dpi_parsing_info *parsing_info
 		}
 	}
 
-	DOCA_LOG_INFO("find segmentation fault #5");
-
 	doca_dpi_stat_get(dpi_ctx, true, &stats);
+
 	DOCA_LOG_INFO("------------- DPI STATISTICS --------------");
 	DOCA_LOG_INFO("Packets scanned:%d", stats.nb_scanned_pkts);
 	DOCA_LOG_INFO("Matched signatures:%d", stats.nb_matches);
@@ -204,57 +197,62 @@ int dpi_scan(struct rte_mbuf *packet, struct doca_dpi_parsing_info *parsing_info
 	DOCA_LOG_INFO("HTTP matches:%d", stats.nb_http_parser_based);
 
 	doca_dpi_destroy(dpi_ctx);
-	//	doca_flow_destroy();
 
 	return 0;
 }
-void scan(unsigned int nb_queues, unsigned int nb_ports)
+static void
+handle_packets_received(uint16_t packets_received, struct rte_mbuf **packets)
 {
-
-	// uint8_t nb_ports = rte_eth_dev_count_avail();
-
-	struct rte_mbuf *packets[PACKET_BURST];
-	uint16_t nb_packets, queue;
-
+	struct rte_mbuf *packet = NULL;
+	uint16_t queue_id = 0;
 	uint8_t ingress_port;
 	uint32_t current_packet;
 
-	struct rte_sft_mbuf_info mbuf_info = {0};
-	struct doca_dpi_parsing_info parsing_info = {0};
-	struct rte_sft_error error;
 
-	DOCA_LOG_INFO("START");
-	DOCA_LOG_INFO("Number of ports:%d", nb_ports);
-	DOCA_LOG_INFO("Number of queues:%d", nb_queues);
-	while (1)
-	{
-		for (ingress_port = 0; ingress_port < nb_ports; ingress_port++)
-		{
-			for (queue = 0; queue < nb_queues; queue++)
-			{
+	for (current_packet = 0; current_packet < packets_received; current_packet++) {
+
+		uint32_t payload_offset = 0;
+		struct rte_sft_mbuf_info mbuf_info = {0};
+		struct doca_dpi_parsing_info parsing_info = {0};
+		struct rte_sft_error error;
+
+		packet = packets[current_packet];
+
+		rte_sft_parse_mbuf(packet, &mbuf_info, NULL, &error);
+		set_l4_parsing_info(&parsing_info, &payload_offset, &mbuf_info);
+
+		dpi_scan(&packet,&parsing_info,&payload_offset);
+
+		/* Deciding the port to send the packet to */
+		ingress_port = packet->port ^ 1;
+		print_l4_header(packet);
+
+	}
+
+	/* Packet sent to port 0 or 1*/
+	rte_eth_tx_burst(ingress_port, queue_id, packets, packets_received);
+}
+
+void scan(unsigned int nb_queues, unsigned int nb_ports)
+{
+
+	struct rte_mbuf *packets[PACKET_BURST];
+	uint16_t nb_packets, queue;
+	uint8_t ingress_port;
+
+	while (1) {
+		for (ingress_port = 0; ingress_port < nb_ports; ingress_port++) {
+			for (queue = 0; queue < nb_queues; queue++) {
 				/* Get number of packets received on rx queue */
 				nb_packets =
-					rte_eth_rx_burst(ingress_port, queue, packets, PACKET_BURST);
+				    rte_eth_rx_burst(ingress_port, queue, packets, PACKET_BURST);
 
 				/* Check if packets received and handle them */
 				if (nb_packets)
-				{
-
-					struct rte_mbuf *packet = NULL;
-
-					for (current_packet = 0; current_packet < nb_packets; current_packet++)
-					{
-						uint32_t payload_offset = 0;
-
-						packet = packets[current_packet];
-						rte_sft_parse_mbuf(packet, &mbuf_info, NULL, &error);
-						set_l4_parsing_info(&parsing_info, &payload_offset, &mbuf_info);
-
-						dpi_scan(packet, &parsing_info, &payload_offset);
-					}
-					rte_eth_tx_burst(packets[0]->port ^ 1, 0, packets, nb_packets);
-				}
+					handle_packets_received(nb_packets, packets);
 			}
+
+
 		}
 	}
 
