@@ -1,0 +1,2 @@
+alert http any any -> any any (msg:"user agent ubuntu"; content:"Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:101.0)"; http_user_agent;sid:1)
+alert http any any -> any any (msg:"user agent windows"; content:"Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.0.2)"; http_user_agent;sid:2)
