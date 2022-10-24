@@ -1,0 +1,19 @@
+\BOOKMARK [0][-]{chapter.1}{Introduzione}{}% 1
+\BOOKMARK [0][-]{chapter.2}{Hardware utilizzato}{}% 2
+\BOOKMARK [1][-]{section.2.1}{Data processing unit\(DPU\)}{chapter.2}% 3
+\BOOKMARK [1][-]{section.2.2}{Nvidia Bluefield-2}{chapter.2}% 4
+\BOOKMARK [2][-]{subsection.2.2.1}{DOCA}{section.2.2}% 5
+\BOOKMARK [0][-]{chapter.3}{Configurazione}{}% 6
+\BOOKMARK [1][-]{section.3.1}{Installazione Bluefield}{chapter.3}% 7
+\BOOKMARK [1][-]{section.3.2}{Installazione Doca\(v.1.2\)}{chapter.3}% 8
+\BOOKMARK [1][-]{section.3.3}{Esecuzione di un'applicazione su BlueField}{chapter.3}% 9
+\BOOKMARK [2][-]{subsection.3.3.1}{Scalabale Function}{section.3.3}% 10
+\BOOKMARK [2][-]{subsection.3.3.2}{Open virtual switch\(ovs\)}{section.3.3}% 11
+\BOOKMARK [0][-]{chapter.4}{Applicazione}{}% 12
+\BOOKMARK [1][-]{section.4.1}{Load balancing}{chapter.4}% 13
+\BOOKMARK [1][-]{section.4.2}{Protocollo HTTP }{chapter.4}% 14
+\BOOKMARK [1][-]{section.4.3}{Regole Suricata}{chapter.4}% 15
+\BOOKMARK [1][-]{section.4.4}{Tabelle Hash}{chapter.4}% 16
+\BOOKMARK [1][-]{section.4.5}{Implementazione}{chapter.4}% 17
+\BOOKMARK [0][-]{chapter.5}{Conclusione}{}% 18
+\BOOKMARK [0][-]{chapter.5}{Bibliografia}{}% 19
